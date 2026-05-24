@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.live import router as live_router
+from app.middleware.rate_limit import RateLimitMiddleware
 
 # Structured logging
 logging.basicConfig(
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI):
     """Startup: create tables if DB available; Shutdown: cleanup."""
     logger.info("🚀 HK Racing Quant starting up...")
     logger.info(f"Mode: {'full' if ENABLE_DB_ROUTES else 'live-only'}")
+    logger.info("Rate limiting: 30 req/min, 300 req/hr per IP")
     try:
         from app.database import init_db
         await init_db()
@@ -43,7 +45,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="🇭🇰 HK Racing Quant System",
     description="香港賽馬量化分析與 +EV 投注系統 API",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -56,6 +58,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting (must be added before other middleware for correct IP detection)
+app.add_middleware(RateLimitMiddleware)
 
 
 # ═══ Request logging middleware ═══
@@ -98,9 +103,10 @@ if ENABLE_DB_ROUTES:
 async def root():
     return {
         "system": "HK Racing Quant System",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "status": "running",
         "mode": "full" if ENABLE_DB_ROUTES else "live-only",
+        "rate_limit": "30/min, 300/hr per IP",
         "docs": "/docs",
     }
 
