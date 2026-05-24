@@ -67,9 +67,26 @@ https://hk-racing-quant.vercel.app,http://localhost:3000
 
 Render 免費 tier 15 分鐘無流量會休眠，重新啟動需 ~30 秒。
 
-**自動喚醒**：Vercel Cron 每 14 分鐘 ping Render `/health`。
+**自動喚醒**：
 
-配置已寫在 `frontend/vercel.json`：
+> ⚠️ **Vercel 免費版不支援 Cron Jobs**（需 Pro 計劃）。請用以下替代方案：
+
+### 方案 A：cron-job.org（推薦，免費）
+1. 註冊 https://cron-job.org
+2. 建立新任務：
+   - URL: `https://你的render域名.onrender.com/health`
+   - Schedule: 每 14 分鐘
+   - HTTP Method: GET
+
+### 方案 B：UptimeRobot（免費）
+1. 註冊 https://uptimerobot.com
+2. 建立新 monitor：
+   - Monitor Type: HTTP(s)
+   - URL: `https://你的render域名.onrender.com/health`
+   - Monitoring Interval: 5 分鐘
+
+### 方案 C：Vercel Pro
+如果你有 Vercel Pro，`frontend/vercel.json` 已配置好 cron：
 ```json
 {
   "crons": [{
@@ -80,10 +97,6 @@ Render 免費 tier 15 分鐘無流量會休眠，重新啟動需 ~30 秒。
 ```
 
 `frontend/api/ping.js` 是 Vercel Serverless Function，負責打 Render health endpoint。
-
-**備選方案**（如果 Vercel cron 不可靠）：
-- [cron-job.org](https://cron-job.org)（免費）→ 設定每 14 分鐘 ping `https://hk-racing-quant-api.onrender.com/health`
-- [UptimeRobot](https://uptimerobot.com)（免費）→ 同上
 
 ---
 
