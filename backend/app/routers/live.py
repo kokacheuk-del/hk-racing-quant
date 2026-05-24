@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.scraper.hkjc_fetcher import HKJCGraphQLClient, HKJCDataFetcher
+from app.services.data_provider import get_provider
 from app.services.quant_engine import (
     QuantAnalysisOrchestrator, RunnerFeatures, FeatureWeights,
 )
@@ -39,21 +39,8 @@ def _float(val, default=0.0) -> float:
     except (ValueError, TypeError):
         return default
 
-# ── Shared client (singleton per process) ──
-_gql_client: Optional[HKJCGraphQLClient] = None
-_fetcher: Optional[HKJCDataFetcher] = None
-
-def _get_gql() -> HKJCGraphQLClient:
-    global _gql_client
-    if _gql_client is None:
-        _gql_client = HKJCGraphQLClient()
-    return _gql_client
-
-def _get_fetcher() -> HKJCDataFetcher:
-    global _fetcher
-    if _fetcher is None:
-        _fetcher = HKJCDataFetcher()
-    return _fetcher
+# ── Data source (abstracted via DataProvider) ──
+# 切換數據源只需改環境變數 DATA_PROVIDER，路由層無需改動
 
 
 # ═══════════════════════════════════════════════
@@ -168,8 +155,8 @@ async def live_meetings(
     venue_code: Optional[str] = Query(None),
 ):
     """獲取賽事日列表（從 HKJC GraphQL 代理）"""
-    client = _get_gql()
-    meetings = client.get_race_meetings(race_date=date, venue_code=venue_code)
+    provider = get_provider()
+    meetings = provider.get_race_meetings(race_date=date, venue_code=venue_code)
     if meetings is None:
         raise HTTPException(502, "Failed to fetch from HKJC GraphQL API")
 
@@ -194,9 +181,9 @@ async def live_odds(
     venue_code: Optional[str] = Query(None),
 ):
     """獲取即時賠率（從 HKJC GraphQL 代理）"""
-    client = _get_gql()
+    provider = get_provider()
     types_list = [t.strip() for t in odds_types.split(",")]
-    pools = client.get_race_odds(
+    pools = provider.get_race_odds(
         race_no=race_no,
         odds_types=types_list,
         race_date=date,
@@ -216,9 +203,9 @@ async def live_pools(
     venue_code: Optional[str] = Query(None),
 ):
     """獲取彩池投注額"""
-    client = _get_gql()
+    provider = get_provider()
     types_list = [t.strip() for t in odds_types.split(",")]
-    pools = client.get_race_pools(
+    pools = provider.get_race_pools(
         race_no=race_no,
         odds_types=types_list,
         race_date=date,
@@ -241,10 +228,10 @@ async def live_analyze(
 
     不依賴數據庫，全部實時計算。
     """
-    client = _get_gql()
+    provider = get_provider()
 
     # 1. 獲取賽事數據
-    meetings = client.get_race_meetings(race_date=date, venue_code=venue_code)
+    meetings = provider.get_race_meetings(race_date=date, venue_code=venue_code)
     if not meetings:
         raise HTTPException(502, "No race meetings found")
 
@@ -283,7 +270,7 @@ async def live_analyze(
                 jockey_today_stats[jcode]["places"] += 1
 
     # 2. 獲取賠率
-    odds_pools = client.get_race_odds(
+    odds_pools = provider.get_race_odds(
         race_no=race_no,
         odds_types=["WIN", "PLA", "QIN"],
         race_date=date or meeting.get("date"),
@@ -778,8 +765,8 @@ async def live_results(
     except (ValueError, AttributeError):
         raise HTTPException(400, "Invalid date format, use YYYY-MM-DD")
 
-    fetcher = _get_fetcher()
-    result = fetcher.fetch_results(race_date)
+    provider = get_provider()
+    result = provider.fetch_results(race_date)
 
     return {
         "date": date,
