@@ -18,6 +18,11 @@ from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
 
 import httpx
+import random
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════
@@ -50,6 +55,38 @@ GRAPHQL_HEADERS = {
     "Referer": f"{HKJC_BASE}/",
     "Origin": HKJC_BASE,
 }
+
+
+# ═══════════════════════════════════════════════
+#  Anti-Block Utilities
+# ═══════════════════════════════════════════════
+
+def _human_delay(min_s: float = 0.8, max_s: float = 3.0):
+    """隨機延遲，模擬人類瀏覽行為，避免固定間隔被 WAF 偵測"""
+    delay = random.uniform(min_s, max_s)
+    logger.debug(f"Anti-block delay: {delay:.2f}s")
+    time.sleep(delay)
+
+
+def _retry_request(func, max_retries: int = 3, backoff_base: float = 2.0):
+    """
+    帶指數退避的重試機制。
+    如果被 Block（429/503），自動等待後重試。
+    """
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in (429, 503):
+                wait = backoff_base ** attempt + random.uniform(0.5, 2.0)
+                logger.warning(f"Rate limited ({e.response.status_code}), retry {attempt+1}/{max_retries} in {wait:.1f}s")
+                time.sleep(wait)
+            elif e.response.status_code == 403:
+                logger.error(f"Blocked by WAF (403) — IP or fingerprint may be flagged")
+                raise
+            else:
+                raise
+    raise httpx.HTTPStatusError(f"Max retries ({max_retries}) exceeded", request=e.request, response=e.response)
 
 
 # ═══════════════════════════════════════════════
@@ -124,10 +161,16 @@ class HKJCResultsParser:
         self.client.close()
 
     def fetch_results_page(self, race_date: date) -> str:
-        """獲取賽果頁面 HTML"""
+        """獲取賽果頁面 HTML（帶隨機延遲 + 重試）"""
+        _human_delay(1.0, 3.0)  # HTML 頁面需要更長延遲
         date_str = race_date.strftime("%Y/%m/%d")
-        resp = self.client.get(RESULTS_URL, params={"RaceDate": date_str})
-        resp.raise_for_status()
+
+        def _do_fetch():
+            resp = self.client.get(RESULTS_URL, params={"RaceDate": date_str})
+            resp.raise_for_status()
+            return resp
+
+        resp = _retry_request(_do_fetch)
         return resp.text
 
     def parse_results(self, html: str, race_date: date) -> ParsedRaceDay:
@@ -479,7 +522,7 @@ class HKJCGraphQLClient:
         self, query: str, variables: Optional[Dict] = None
     ) -> Dict:
         """
-        執行 GraphQL 查詢。
+        執行 GraphQL 查詢（帶隨機延遲 + 重試機制）。
 
         Args:
             query: GraphQL 查詢語句
@@ -492,14 +535,19 @@ class HKJCGraphQLClient:
             ValueError: 如果查詢不匹配 schema
             httpx.HTTPError: 如果請求失敗
         """
+        _human_delay(0.3, 1.5)  # 輕量延遲，避免連續請求觸發 WAF
+
         payload = {
             "query": query,
             "variables": variables or {},
         }
 
-        resp = self.client.post(GRAPHQL_URL, json=payload)
-        resp.raise_for_status()
+        def _do_request():
+            resp = self.client.post(GRAPHQL_URL, json=payload)
+            resp.raise_for_status()
+            return resp
 
+        resp = _retry_request(_do_request)
         data = resp.json()
         if "errors" in data:
             error_msgs = [e.get("message", "") for e in data["errors"]]
