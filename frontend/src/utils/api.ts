@@ -11,7 +11,10 @@ import type {
 
 // In production (Vercel), point to Render backend directly.
 // In development, use Vite proxy (see vite.config.ts).
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 
+  (import.meta.env.PROD 
+    ? 'https://hk-racing-quant.onrender.com/api' 
+    : '/api');
 
 // ═══ Generic Fetch Helper ═══
 
