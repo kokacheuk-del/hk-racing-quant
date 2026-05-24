@@ -2,6 +2,7 @@ services:
   - type: web
     name: hk-racing-quant-api
     runtime: python
+    rootDir: backend
     buildCommand: pip install -r requirements-render.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -10,5 +11,5 @@ services:
       - key: ENABLE_DB_ROUTES
         value: "false"
       - key: CORS_ORIGINS
-        sync: false  # Set this in Render dashboard to your Vercel URL
+        value: "*"
     plan: free
