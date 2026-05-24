@@ -118,10 +118,13 @@ export interface QuantAnalysis {
 export interface RunnerAnalysis {
   horse_no: number;
   horse_name: string;
+  horse_name_ch?: string;
   barrier: number;
   weight: number;
   jockey: string;
+  jockey_ch?: string;
   trainer: string;
+  trainer_ch?: string;
   win_odds: number;
   p_true: number;
   p_market: number;
@@ -129,8 +132,15 @@ export interface RunnerAnalysis {
   edge: number;
   kelly_fraction: number;
   is_value_bet: boolean;
+  ev_confidence?: string;
+  strong_contender?: boolean;
+  barrier_versatile?: boolean;
+  superhorse?: boolean;
   pace_style: 'front' | 'mid' | 'closer';
   rating: number;
+  last6run?: string;
+  hot_favourite?: boolean;
+  odds_drop?: number;
 }
 
 export interface PaceForecast {

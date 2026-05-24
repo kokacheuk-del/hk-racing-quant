@@ -77,7 +77,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
                 {venue.en} <span className="text-[var(--text-secondary)]">({venue.ch})</span>
               </h2>
               <p className="text-sm text-[var(--text-muted)]">
-                {meeting.date} · {meeting.total_races || meeting.races?.length || 0} Races
+                {meeting.date} · {meeting.totalNumberOfRace || meeting.races?.length || 0} Races
               </p>
             </div>
           </div>
