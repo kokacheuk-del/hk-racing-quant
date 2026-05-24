@@ -6,14 +6,21 @@ Deployment modes:
   - Full mode: With PostgreSQL, also serves /api/v1/* endpoints
 """
 import os
+import time
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.live import router as live_router
 
-logger = logging.getLogger(__name__)
+# Structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("hkrq")
 
 # Check if DB-dependent routes should be loaded
 ENABLE_DB_ROUTES = os.getenv("ENABLE_DB_ROUTES", "false").lower() == "true"
@@ -22,18 +29,21 @@ ENABLE_DB_ROUTES = os.getenv("ENABLE_DB_ROUTES", "false").lower() == "true"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: create tables if DB available; Shutdown: cleanup."""
+    logger.info("🚀 HK Racing Quant starting up...")
+    logger.info(f"Mode: {'full' if ENABLE_DB_ROUTES else 'live-only'}")
     try:
         from app.database import init_db
         await init_db()
     except Exception as e:
         logger.warning(f"DB init skipped: {e}")
     yield
+    logger.info("👋 HK Racing Quant shutting down")
 
 
 app = FastAPI(
     title="🇭🇰 HK Racing Quant System",
     description="香港賽馬量化分析與 +EV 投注系統 API",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -46,6 +56,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ═══ Request logging middleware ═══
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    method = request.method
+    path = request.url.path
+
+    # Skip health check spam from cron
+    if path == "/health":
+        return await call_next(request)
+
+    response = await call_next(request)
+    duration_ms = round((time.time() - start) * 1000)
+
+    # Log warnings for slow requests or errors
+    level = logging.WARNING if response.status_code >= 400 or duration_ms > 5000 else logging.INFO
+    logger.log(level, f"{method} {path} → {response.status_code} ({duration_ms}ms)")
+
+    return response
+
 
 # Always available — live data proxy (no DB needed)
 app.include_router(live_router)
@@ -66,7 +98,7 @@ if ENABLE_DB_ROUTES:
 async def root():
     return {
         "system": "HK Racing Quant System",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "status": "running",
         "mode": "full" if ENABLE_DB_ROUTES else "live-only",
         "docs": "/docs",

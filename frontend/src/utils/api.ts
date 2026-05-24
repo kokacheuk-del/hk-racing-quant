@@ -16,18 +16,51 @@ const API_BASE = import.meta.env.VITE_API_BASE ||
     ? 'https://hk-racing-quant.onrender.com/api' 
     : '/api');
 
+// ═══ Cold-start detection ═══
+let coldStartDetected = false;
+
+export function isColdStarting(): boolean {
+  return coldStartDetected;
+}
+
+export function clearColdStart(): void {
+  coldStartDetected = false;
+}
+
 // ═══ Generic Fetch Helper ═══
 
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000); // 60s for cold start
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      ...options,
+    });
+
+    if (res.status === 503 || res.status === 502) {
+      coldStartDetected = true;
+      throw new Error('SERVER_COLD_START');
+    }
+
+    coldStartDetected = false;
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      throw new Error(`API ${res.status}: ${text}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      coldStartDetected = true;
+      throw new Error('SERVER_COLD_START');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
 // ═══ Live Data API (via backend proxy — no CORS issues) ═══

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { RaceMeeting } from '../utils/types';
-import { getRaceMeetings, getActiveMeetings } from '../utils/api';
+import { getRaceMeetings, getActiveMeetings, isColdStarting, clearColdStart } from '../utils/api';
 import { formatTime } from '../utils/helpers';
 import { VENUE_MAP, GOING_MAP } from '../utils/types';
-import { Activity, MapPin, Clock } from 'lucide-react';
+import { Activity, MapPin, Clock, ServerCrash, Loader2 } from 'lucide-react';
 
 interface Props {
   onSelectRace: (meeting: RaceMeeting, raceNo: number) => void;
@@ -16,10 +16,12 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
   const [activeDate, setActiveDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [coldStart, setColdStart] = useState(false);
 
   const loadMeetings = useCallback(async (date?: string) => {
     setLoading(true);
     setError('');
+    setColdStart(false);
     try {
       const data = await getRaceMeetings(date || undefined);
       setMeetings(data);
@@ -27,7 +29,12 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
         setActiveDate(data[0].date);
       }
     } catch (e: any) {
-      setError(e.message);
+      if (e.message === 'SERVER_COLD_START' || isColdStarting()) {
+        setColdStart(true);
+        setError('');
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +48,25 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
     return (
       <div className="card flex items-center justify-center h-64">
         <div className="text-[var(--text-muted)] flex items-center gap-2">
-          <Activity className="w-4 h-4 animate-spin" /> Loading race data...
+          <Activity className="w-4 h-4 animate-spin" /> 載入中...
+        </div>
+      </div>
+    );
+  }
+
+  if (coldStart) {
+    return (
+      <div className="card h-64 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-8 h-8 text-[var(--accent-cyan)] animate-spin mx-auto" />
+          <p className="text-[var(--accent-cyan)] font-semibold">正在喚醒伺服器</p>
+          <p className="text-[var(--text-muted)] text-sm">免費伺服器休眠中，首次啟動需 30-50 秒</p>
+          <button
+            onClick={() => { clearColdStart(); loadMeetings(); }}
+            className="mt-2 px-4 py-1.5 rounded-lg bg-[var(--accent-cyan)] text-white text-sm hover:opacity-90 transition"
+          >
+            重新嘗試
+          </button>
         </div>
       </div>
     );
@@ -51,13 +76,11 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
     return (
       <div className="card h-64 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-[var(--accent-red)] mb-2">Failed to load race data</p>
+          <ServerCrash className="w-6 h-6 text-[var(--accent-red)] mx-auto mb-2" />
+          <p className="text-[var(--accent-red)] mb-2">無法載入賽事資料</p>
           <p className="text-[var(--text-muted)] text-sm">{error}</p>
-          <p className="text-[var(--text-muted)] text-xs mt-1">
-            Make sure the backend is running: <code>uvicorn app.main:app --port 8000</code>
-          </p>
           <button onClick={() => loadMeetings()} className="mt-3 text-[var(--accent-blue)] text-sm hover:underline">
-            Retry
+            重試
           </button>
         </div>
       </div>
@@ -77,7 +100,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
                 {venue.en} <span className="text-[var(--text-secondary)]">({venue.ch})</span>
               </h2>
               <p className="text-sm text-[var(--text-muted)]">
-                {meeting.date} · {meeting.totalNumberOfRace || meeting.races?.length || 0} Races
+                {meeting.date} · {meeting.totalNumberOfRace || meeting.races?.length || 0} 場賽事
               </p>
             </div>
           </div>
@@ -100,7 +123,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
                   }
                 `}
               >
-                <span className="text-xs opacity-70">R{race.no}</span>
+                <span className="text-xs opacity-70">第{race.no}場</span>
                 <span className="font-mono">{formatTime(race.postTime)}</span>
                 {race.distance && <span className="text-[10px] opacity-60">{race.distance}m</span>}
               </button>
@@ -117,7 +140,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <div className="card">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-bold text-[var(--accent-cyan)]">
-                Race {race.no}: {race.raceName_en}
+                第{race.no}場: {race.raceName_en}
               </h3>
               <div className="flex items-center gap-2">
                 {going && (
@@ -130,7 +153,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
               </div>
             </div>
             <div className="text-sm text-[var(--text-muted)]">
-              {race.raceCourse?.description_en} · {race.wageringFieldSize} runners
+              {race.raceCourse?.description_en} · {race.wageringFieldSize} 參賽馬
             </div>
           </div>
         );
@@ -139,7 +162,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
       {meetings.length > 1 && (
         <div className="card">
           <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">
-            <Clock className="w-4 h-4 inline mr-1" /> All Meetings
+            <Clock className="w-4 h-4 inline mr-1" /> 所有賽日
           </h3>
           <div className="flex gap-3">
             {meetings.map(m => {
