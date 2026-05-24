@@ -11,5 +11,5 @@ services:
       - key: ENABLE_DB_ROUTES
         value: "false"
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://hk-racing-quant.vercel.app,http://localhost:5173"
     plan: free
