@@ -1,0 +1,8 @@
+# Lightweight requirements for Render deployment (live-only mode)
+# No DB drivers, no ML libs — just the API proxy + quant engine
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+httpx>=0.25.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
