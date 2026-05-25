@@ -149,34 +149,68 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <span className="tag tag-blue">{meeting.status}</span>
         </div>
 
-        {/* Date picker for testing */}
-        <div className="flex items-center gap-2 mb-3 p-2 bg-[var(--bg-secondary)] rounded-lg">
-          <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
-          <span className="text-xs text-[var(--text-muted)]">選擇賽日測試：</span>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={handleDateChange}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: '#1e293b',
-              border: '1px solid #475569',
-              borderRadius: '6px',
-              color: '#f1f5f9',
-              fontSize: '13px',
-              minWidth: '140px',
-              cursor: 'pointer',
-            }}
-            onFocus={(e) => { e.target.style.borderColor = '#06b6d4'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#475569'; }}
-          />
-          <button
-            onClick={() => loadMeetings(selectedDate)}
-            disabled={loading}
-            className="px-2 py-1 bg-[var(--accent-cyan)] text-white text-xs rounded hover:opacity-90 disabled:opacity-50 transition"
-          >
-            {loading ? '...' : '載入'}
-          </button>
+        {/* Date selector - simplified text input + presets */}
+        <div className="flex flex-col gap-2 mb-3 p-2 bg-[var(--bg-secondary)] rounded-lg">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
+            <span className="text-xs text-[var(--text-muted)]">選擇賽日測試：</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              placeholder="YYYY-MM-DD"
+              style={{
+                padding: '8px 12px',
+                backgroundColor: '#1e293b',
+                border: '1px solid #475569',
+                borderRadius: '6px',
+                color: '#f1f5f9',
+                fontSize: '13px',
+                width: '120px',
+              }}
+            />
+            <button
+              onClick={() => loadMeetings(selectedDate)}
+              disabled={loading}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#06b6d4',
+                color: 'white',
+                fontSize: '13px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              {loading ? '...' : '載入'}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1 mt-1">
+            <span className="text-xs text-[var(--text-muted)]">快捷：</span>
+            {['2026-05-24', '2026-05-21', '2026-05-18'].map(d => (
+              <button
+                key={d}
+                onClick={() => {
+                  setSelectedDate(d);
+                  loadMeetings(d);
+                }}
+                style={{
+                  padding: '2px 8px',
+                  backgroundColor: selectedDate === d ? '#06b6d4' : '#334155',
+                  color: 'white',
+                  fontSize: '11px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {d.slice(5)}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">

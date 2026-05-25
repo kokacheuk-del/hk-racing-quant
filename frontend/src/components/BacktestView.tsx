@@ -160,44 +160,65 @@ export default function BacktestView() {
       </div>
 
       {/* Date + Bankroll input */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-[var(--accent-cyan)]" />
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            style={{
-              padding: '10px 14px',
-              backgroundColor: '#1e293b',
-              border: '1px solid #475569',
-              borderRadius: '8px',
-              color: '#f1f5f9',
-              fontSize: '14px',
-              minWidth: '160px',
-              cursor: 'pointer',
-            }}
-            onFocus={(e) => { e.target.style.borderColor = '#06b6d4'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#475569'; }}
-          />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-[var(--accent-cyan)]" />
+            <input
+              type="text"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              placeholder="YYYY-MM-DD"
+              style={{
+                padding: '10px 14px',
+                backgroundColor: '#1e293b',
+                border: '1px solid #475569',
+                borderRadius: '8px',
+                color: '#f1f5f9',
+                fontSize: '14px',
+                width: '140px',
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)]">本金</span>
+            <input
+              type="number"
+              value={bankroll}
+              onChange={e => setBankroll(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-24 px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] font-mono text-sm focus:outline-none focus:border-[var(--accent-cyan)]"
+            />
+          </div>
+          <button
+            onClick={runBacktest}
+            disabled={loading || !date}
+            className="px-4 py-1.5 bg-[var(--accent-cyan)] text-white text-sm rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            執行回測
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--text-muted)]">本金</span>
-          <input
-            type="number"
-            value={bankroll}
-            onChange={e => setBankroll(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-24 px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] font-mono text-sm focus:outline-none focus:border-[var(--accent-cyan)]"
-          />
+        {/* Quick date presets */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-[var(--text-muted)]">快捷：</span>
+          {['2026-05-24', '2026-05-21', '2026-05-18'].map(d => (
+            <button
+              key={d}
+              onClick={() => setDate(d)}
+              style={{
+                padding: '4px 12px',
+                backgroundColor: date === d ? '#06b6d4' : '#334155',
+                color: 'white',
+                fontSize: '12px',
+                borderRadius: '4px',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {d.slice(5)}
+            </button>
+          ))}
         </div>
-        <button
-          onClick={runBacktest}
-          disabled={loading || !date}
-          className="px-4 py-1.5 bg-[var(--accent-cyan)] text-white text-sm rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          執行回測
-        </button>
       </div>
 
       {loading && (
