@@ -186,8 +186,6 @@ async def live_odds(
     pools = provider.get_race_odds(
         race_no=race_no,
         odds_types=types_list,
-        race_date=date,
-        venue_code=venue_code,
     )
     if pools is None:
         raise HTTPException(502, "Failed to fetch odds from HKJC")
@@ -273,8 +271,6 @@ async def live_analyze(
     odds_pools = provider.get_race_odds(
         race_no=race_no,
         odds_types=["WIN", "PLA", "QIN"],
-        race_date=date or meeting.get("date"),
-        venue_code=venue_code or meeting.get("venueCode"),
     ) or []
 
     # Build odds maps
