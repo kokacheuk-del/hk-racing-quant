@@ -3,7 +3,7 @@ import type { RaceMeeting } from '../utils/types';
 import { getRaceMeetings, getActiveMeetings, isColdStarting, clearColdStart } from '../utils/api';
 import { formatTime } from '../utils/helpers';
 import { VENUE_MAP, GOING_MAP } from '../utils/types';
-import { Activity, MapPin, Clock, ServerCrash, Loader2 } from 'lucide-react';
+import { Activity, MapPin, Clock, ServerCrash, Loader2, Calendar } from 'lucide-react';
 
 interface Props {
   onSelectRace: (meeting: RaceMeeting, raceNo: number) => void;
@@ -14,6 +14,7 @@ interface Props {
 export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRaceNo }: Props) {
   const [meetings, setMeetings] = useState<RaceMeeting[]>([]);
   const [activeDate, setActiveDate] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [coldStart, setColdStart] = useState(false);
@@ -25,8 +26,13 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
     try {
       const data = await getRaceMeetings(date || undefined);
       setMeetings(data);
-      if (data.length > 0 && !date) {
+      if (data.length > 0) {
         setActiveDate(data[0].date);
+        if (!selectedMeeting) {
+          // Auto-select first race of first meeting
+          const firstRaceNo = data[0].races?.[0]?.no || 1;
+          onSelectRace(data[0], firstRaceNo);
+        }
       }
     } catch (e: any) {
       if (e.message === 'SERVER_COLD_START' || isColdStarting()) {
@@ -38,9 +44,21 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onSelectRace, selectedMeeting]);
 
-  useEffect(() => { loadMeetings(); }, [loadMeetings]);
+  // Load today's meetings on mount
+  useEffect(() => {
+    loadMeetings();
+    // Set date picker to today
+    const today = new Date().toISOString().split('T')[0];
+    setSelectedDate(today);
+  }, [loadMeetings]);
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
+    loadMeetings(newDate);
+  };
 
   const meeting = meetings[0];
 
@@ -62,7 +80,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <p className="text-[var(--accent-cyan)] font-semibold">正在喚醒伺服器</p>
           <p className="text-[var(--text-muted)] text-sm">免費伺服器休眠中，首次啟動需 30-50 秒</p>
           <button
-            onClick={() => { clearColdStart(); loadMeetings(); }}
+            onClick={() => { clearColdStart(); loadMeetings(selectedDate); }}
             className="mt-2 px-4 py-1.5 rounded-lg bg-[var(--accent-cyan)] text-white text-sm hover:opacity-90 transition"
           >
             重新嘗試
@@ -77,10 +95,23 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
       <div className="card h-64 flex items-center justify-center">
         <div className="text-center">
           <ServerCrash className="w-6 h-6 text-[var(--accent-red)] mx-auto mb-2" />
-          <p className="text-[var(--accent-red)] mb-2">無法載入賽事資料</p>
-          <p className="text-[var(--text-muted)] text-sm">{error}</p>
-          <button onClick={() => loadMeetings()} className="mt-3 text-[var(--accent-blue)] text-sm hover:underline">
-            重試
+          <p className="text-[var(--accent-red)] mb-2">該日無賽事資料</p>
+          <p className="text-[var(--text-muted)] text-xs">請選擇其他日期測試</p>
+          {/* Date picker also shown here for convenience */}
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="px-2 py-1 bg-[var(--bg-secondary)] border border-[var(--border)] rounded text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)]"
+            />
+          </div>
+          <button
+            onClick={() => loadMeetings(selectedDate)}
+            className="mt-3 text-[var(--accent-blue)] text-sm hover:underline"
+          >
+            重新載入
           </button>
         </div>
       </div>
@@ -105,6 +136,25 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
             </div>
           </div>
           <span className="tag tag-blue">{meeting.status}</span>
+        </div>
+
+        {/* Date picker for testing */}
+        <div className="flex items-center gap-2 mb-3 p-2 bg-[var(--bg-secondary)] rounded-lg">
+          <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
+          <span className="text-xs text-[var(--text-muted)]">選擇賽日測試：</span>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            className="flex-1 px-2 py-1 bg-transparent border border-[var(--border)] rounded text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)]"
+          />
+          <button
+            onClick={() => loadMeetings(selectedDate)}
+            disabled={loading}
+            className="px-2 py-1 bg-[var(--accent-cyan)] text-white text-xs rounded hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {loading ? '...' : '載入'}
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -164,13 +214,13 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">
             <Clock className="w-4 h-4 inline mr-1" /> 所有賽日
           </h3>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             {meetings.map(m => {
               const v = VENUE_MAP[m.venueCode] || { en: m.venueCode };
               return (
                 <button
                   key={m.id}
-                  onClick={() => { setActiveDate(m.date); loadMeetings(m.date); }}
+                  onClick={() => { setActiveDate(m.date); loadMeetings(m.date); setSelectedDate(m.date); }}
                   className={`text-xs px-3 py-1.5 rounded border transition-all
                     ${activeDate === m.date
                       ? 'border-[var(--accent-blue)] text-[var(--accent-blue)] bg-[var(--accent-blue)]/10'

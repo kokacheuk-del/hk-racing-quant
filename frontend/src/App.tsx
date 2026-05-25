@@ -5,8 +5,8 @@ import ModelCalculator from './components/ModelCalculator';
 import ValueBetSignals from './components/ValueBetSignals';
 import BetCalculator from './components/BetCalculator';
 import BacktestView from './components/BacktestView';
-import { computeLocalAnalysis, getLiveAnalysis, getRaceMeetings } from './utils/api';
-import { Activity, Eye, History, BarChart3, Zap, Wallet, CalendarX, Timer } from 'lucide-react';
+import { computeLocalAnalysis, getLiveAnalysis } from './utils/api';
+import { Activity, Eye, History, BarChart3, Zap, Wallet, Timer } from 'lucide-react';
 
 interface AnalysisData {
   runners: any[];
@@ -25,8 +25,6 @@ export default function App() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [topTab, setTopTab] = useState<TopTab>('live');
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('race');
-  const [hasRaceToday, setHasRaceToday] = useState<boolean | null>(null);
-  const [nextRaceDate, setNextRaceDate] = useState<string>('');
   const [lastRefresh, setLastRefresh] = useState<number>(0);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -34,37 +32,6 @@ export default function App() {
     setSelectedMeeting(meeting);
     setSelectedRaceNo(raceNo);
   };
-
-  // Check if there's a race today
-  useEffect(() => {
-    const checkRaceDay = async () => {
-      try {
-        const data = await getRaceMeetings();
-        if (data.length > 0) {
-          setHasRaceToday(true);
-        } else {
-          setHasRaceToday(false);
-          // Try to find next race day by checking upcoming dates
-          const today = new Date();
-          for (let i = 1; i <= 14; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
-            try {
-              const futureData = await getRaceMeetings(dateStr);
-              if (futureData.length > 0) {
-                setNextRaceDate(dateStr);
-                break;
-              }
-            } catch { continue; }
-          }
-        }
-      } catch {
-        setHasRaceToday(false);
-      }
-    };
-    checkRaceDay();
-  }, []);
 
   // Load analysis when meeting/race changes
   const loadAnalysis = useCallback(async () => {
@@ -80,6 +47,7 @@ export default function App() {
       });
       setLastRefresh(Date.now());
     } catch {
+      // Fallback to client-side calculation if API fails
       const race = selectedMeeting.races?.find((r: any) => r.no === selectedRaceNo);
       if (race?.runners) {
         const result = computeLocalAnalysis(race.runners, []);
@@ -97,9 +65,9 @@ export default function App() {
     loadAnalysis();
   }, [loadAnalysis]);
 
-  // Auto-refresh every 30s during race day
+  // Auto-refresh every 30s when a meeting is selected
   useEffect(() => {
-    if (hasRaceToday && selectedMeeting) {
+    if (selectedMeeting) {
       refreshTimerRef.current = setInterval(() => {
         loadAnalysis();
       }, 30000);
@@ -107,7 +75,7 @@ export default function App() {
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
     };
-  }, [hasRaceToday, selectedMeeting, loadAnalysis]);
+  }, [selectedMeeting, loadAnalysis]);
 
   const secondsSinceRefresh = lastRefresh > 0 ? Math.floor((Date.now() - lastRefresh) / 1000) : 0;
 
@@ -125,7 +93,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 text-xs text-[var(--text-muted)]">
-            {lastRefresh > 0 && hasRaceToday && (
+            {lastRefresh > 0 && selectedMeeting && (
               <span className="hidden sm:flex items-center gap-1">
                 <Timer className="w-3 h-3" />
                 {secondsSinceRefresh < 60 ? `${secondsSinceRefresh}s前更新` : '更新中...'}
@@ -166,22 +134,6 @@ export default function App() {
 
       {topTab === 'live' ? (
         <>
-          {/* No race day notice */}
-          {hasRaceToday === false && (
-            <div className="max-w-[1800px] mx-auto p-4">
-              <div className="card flex flex-col items-center justify-center py-12 space-y-3">
-                <CalendarX className="w-12 h-12 text-[var(--text-muted)]" />
-                <p className="text-xl font-bold text-[var(--text-secondary)]">今日無賽事</p>
-                {nextRaceDate && (
-                  <p className="text-sm text-[var(--text-muted)]">
-                    下一個賽日：<span className="text-[var(--accent-cyan)] font-semibold">{nextRaceDate}</span>
-                  </p>
-                )}
-                <p className="text-xs text-[var(--text-muted)]">可切換至「歷史回測」查看過往賽果分析</p>
-              </div>
-            </div>
-          )}
-
           {/* Desktop: 3-column layout */}
           <main className="hidden lg:block max-w-[1800px] mx-auto p-4 grid grid-cols-12 gap-4">
             <div className="col-span-3 space-y-4">
@@ -271,7 +223,7 @@ export default function App() {
       )}
 
       <footer className="border-t border-[var(--border)] py-3 px-6 text-center text-xs text-[var(--text-muted)] mb-14 lg:mb-0">
-        HK Racing Quant v0.4 · Data via backend proxy from HKJC GraphQL API · For educational purposes only · Not financial advice
+        HK Racing Quant v0.5 · Data via backend proxy from HKJC GraphQL API · For educational purposes only · Not financial advice
       </footer>
     </div>
   );
