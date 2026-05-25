@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.live import router as live_router
+from app.routers.scraper import router as scraper_router
 from app.routers.pre_race import router as pre_race_router
 from app.middleware.rate_limit import RateLimitMiddleware
 
@@ -96,6 +97,7 @@ if ENABLE_DB_ROUTES:
         from app.routers.import_data import router as import_router
         app.include_router(racing_router)
         app.include_router(import_router)
+        app.include_router(scraper_router)
         logger.info("DB routes enabled")
     except Exception as e:
         logger.warning(f"DB routes skipped: {e}")
