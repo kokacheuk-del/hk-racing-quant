@@ -16,4 +16,7 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1000, // 提高到 1000KB，消除 Recharts 等库的大小警告
+  },
 })
