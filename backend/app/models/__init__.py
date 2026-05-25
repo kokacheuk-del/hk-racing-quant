@@ -1,18 +1,22 @@
-# Models package — import schema lazily to avoid DB crash on startup
-# Only import when DB is actually needed (v1 routes)
+"""
+Models package — SQLAlchemy ORM models.
 
-def _import_models():
-    """Lazy import all ORM models. Call only when DB is available."""
-    from app.models.schema import (
-        Horse, HorseWeightHistory, Jockey, Trainer, JockeyTrainerCombo,
-        RaceMeeting, Race, Runner, SectionalTime, OddsSnapshot,
-        ValueBetSignal, FeatureWeightProfile
-    )
-    return {
-        "Horse": Horse, "HorseWeightHistory": HorseWeightHistory,
-        "Jockey": Jockey, "Trainer": Trainer,
-        "JockeyTrainerCombo": JockeyTrainerCombo,
-        "RaceMeeting": RaceMeeting, "Race": Race, "Runner": Runner,
-        "SectionalTime": SectionalTime, "OddsSnapshot": OddsSnapshot,
-        "ValueBetSignal": ValueBetSignal, "FeatureWeightProfile": FeatureWeightProfile,
-    }
+Direct import to avoid DB initialization errors when running in live-only mode.
+All models are exported directly for router imports.
+"""
+
+# Direct import from schema - removed the lazy import wrapper
+# because routers do `from app.models import RaceMeeting` directly
+from app.models.schema import (
+    Horse, HorseWeightHistory, Jockey, Trainer, JockeyTrainerCombo,
+    RaceMeeting, Race, Runner, SectionalTime, OddsSnapshot,
+    ValueBetSignal, FeatureWeightProfile
+)
+
+# Also export for compatibility
+__all__ = [
+    "Horse", "HorseWeightHistory", "Jockey", "Trainer",
+    "JockeyTrainerCombo", "RaceMeeting", "Race", "Runner",
+    "SectionalTime", "OddsSnapshot", "ValueBetSignal",
+    "FeatureWeightProfile",
+]
