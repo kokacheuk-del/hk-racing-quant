@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════
 
 HKJC_BASE = "https://racing.hkjc.com"
-RESULTS_URL = f"{HKJC_BASE}/racing/information/English/Racing/LocalResults.aspx"
+RESULTS_URL = f"{HKJC_BASE}/racing/information/English/Racing/ResultsAll.aspx"
 RACECARD_URL = f"{HKJC_BASE}/racing/information/English/Racing/RaceCard.aspx"
 ODDS_URL = f"{HKJC_BASE}/racing/information/English/Racing/OddsWin.aspx"
 SECTIONAL_URL = f"{HKJC_BASE}/racing/information/English/Racing/SectionalTimes.aspx"
@@ -202,14 +202,19 @@ class HKJCResultsParser:
             }
 
         # 3. 提取賽果行
-        # 找到所有包含 HorseID 鏈接的表格行
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL)
-        for row_html in rows:
-            if "/information/horse" not in row_html and "HorseID=" not in row_html:
+        # 找到所有表格行，通過第一列是否為數字排名來判斷是否為賽果行
+        row_matches = re.finditer(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL | re.IGNORECASE)
+        for match in row_matches:
+            row_html = match.group(1)
+            row_pos = match.start()  # 獲取行在 HTML 中的位置
+            
+            cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.DOTALL | re.IGNORECASE)
+            if len(cells) < 7:  # 新頁面只有 7 列
                 continue
-
-            cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.DOTALL)
-            if len(cells) < 8:
+            
+            # 檢查第一列是不是數字排名（1, 2, 3...）
+            first_cell = re.sub(r"<[^>]+>", "", cells[0]).strip()
+            if not first_cell.isdigit():
                 continue
 
             clean_cells = []
@@ -223,7 +228,16 @@ class HKJCResultsParser:
             try:
                 parsed = self._parse_result_row(clean_cells)
                 if parsed:
-                    race_no = self._current_race_no(html, row_html, result.race_metadata)
+                    # 直接使用行的位置來計算場次
+                    preceding = html[:row_pos]
+                    race_markers = list(re.finditer(r"RACE\s+(\d+)", preceding, re.IGNORECASE))
+                    if race_markers:
+                        race_no = int(race_markers[-1].group(1))
+                    else:
+                        # Fallback：搜索 Class - Distance pattern
+                        class_markers = list(re.finditer(r"Class\s+\d+\s*-\s*\d+\s*M", preceding))
+                        race_no = len(class_markers) if class_markers else 1
+                    
                     if race_no not in result.races:
                         result.races[race_no] = []
                     result.races[race_no].append(parsed)
@@ -239,7 +253,7 @@ class HKJCResultsParser:
 
     def _parse_result_row(self, cells: List[str]) -> Optional[ParsedRaceResult]:
         """解析單行賽果"""
-        if len(cells) < 8:
+        if len(cells) < 6:  # 新頁面只有 7 列，最少需要 6 列
             return None
 
         try:
@@ -267,27 +281,16 @@ class HKJCResultsParser:
             actual_weight = 0
 
         try:
-            horse_weight = int(cells[6]) if len(cells) > 6 else 0
-        except ValueError:
-            horse_weight = 0
-
-        try:
-            barrier = int(cells[7]) if len(cells) > 7 else 0
+            barrier = int(cells[6]) if len(cells) > 6 else 0
         except ValueError:
             barrier = 0
 
-        lbw = cells[8].strip() if len(cells) > 8 else "---"
-
-        # Running positions (多個數字，用空格分隔)
-        running_pos_str = cells[9] if len(cells) > 9 else ""
-        running_positions = [int(x) for x in re.findall(r"\d+", running_pos_str)]
-
-        finish_time = cells[10].strip() if len(cells) > 10 else ""
-
-        try:
-            win_odds = float(cells[11]) if len(cells) > 11 else 0.0
-        except ValueError:
-            win_odds = 0.0
+        # 新頁面缺少以下列，使用默認值
+        horse_weight = 0
+        lbw = "---"
+        running_positions = []
+        finish_time = ""
+        win_odds = 0.0
 
         return ParsedRaceResult(
             position=position,
