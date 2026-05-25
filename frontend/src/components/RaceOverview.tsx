@@ -101,7 +101,8 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <div className="mt-3 flex items-center justify-center gap-2">
             <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
             <input
-            type="date"
+            type="text"
+            placeholder="YYYY-MM-DD"
             value={selectedDate}
             onChange={handleDateChange}
             style={{
@@ -114,8 +115,6 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
               minWidth: '140px',
               cursor: 'pointer',
             }}
-            onFocus={(e) => { e.target.style.borderColor = '#06b6d4'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#475569'; }}
             />
           </div>
           <button
@@ -160,7 +159,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
               type="text"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              placeholder="YYYY-MM-DD"
+              
               style={{
                 padding: '8px 12px',
                 backgroundColor: '#1e293b',
