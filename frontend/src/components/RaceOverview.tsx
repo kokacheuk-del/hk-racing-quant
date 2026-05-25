@@ -57,7 +57,9 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
     setSelectedDate(newDate);
-    loadMeetings(newDate);
+    if (newDate) {
+      loadMeetings(newDate);
+    }
   };
 
   const meeting = meetings[0];
@@ -101,20 +103,19 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <div className="mt-3 flex items-center justify-center gap-2">
             <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
             <input
-            type="text"
-            placeholder="YYYY-MM-DD"
-            value={selectedDate}
-            onChange={handleDateChange}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: '#1e293b',
-              border: '1px solid #475569',
-              borderRadius: '6px',
-              color: '#f1f5f9',
-              fontSize: '13px',
-              minWidth: '140px',
-              cursor: 'pointer',
-            }}
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: '#1e293b',
+                border: '1px solid #475569',
+                borderRadius: '6px',
+                color: '#f1f5f9',
+                fontSize: '13px',
+                minWidth: '140px',
+                cursor: 'pointer',
+              }}
             />
           </div>
           <button
@@ -156,10 +157,9 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
-              type="text"
+              type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              
+              onChange={handleDateChange}
               style={{
                 padding: '8px 12px',
                 backgroundColor: '#1e293b',
@@ -167,25 +167,10 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
                 borderRadius: '6px',
                 color: '#f1f5f9',
                 fontSize: '13px',
-                width: '120px',
+                minWidth: '140px',
+                cursor: 'pointer',
               }}
             />
-            <button
-              onClick={() => loadMeetings(selectedDate)}
-              disabled={loading}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#06b6d4',
-                color: 'white',
-                fontSize: '13px',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                opacity: loading ? 0.5 : 1,
-              }}
-            >
-              {loading ? '...' : '載入'}
-            </button>
           </div>
           <div className="flex flex-wrap gap-1 mt-1">
             <span className="text-xs text-[var(--text-muted)]">快捷：</span>

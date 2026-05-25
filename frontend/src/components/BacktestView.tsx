@@ -68,34 +68,44 @@ export default function BacktestView() {
     setBacktestRaces([]);
 
     try {
-      // 1. 首先嚐試從歷史數據庫獲取
+      // ─────────────────────────────────────────
+      // 核心邏輯：歷史模型預測 vs 實際賽果對比
+      // ─────────────────────────────────────────
+      // 數據庫中已存儲當時的完整數據：
+      // - 模型預測：model_probability (p_true), ev_value, kelly_fraction, is_value_bet
+      // - 實際結果：final_position, win_odds
+      // ─────────────────────────────────────────
       try {
         const historicalData = await getHistoricalBacktest(date);
         if (historicalData.success && historicalData.total_races > 0) {
           setDataSource('historical');
           
-          // 使用歷史數據庫的數據
           const races: BacktestRace[] = [];
           const raceKeys = Object.keys(historicalData.races || {});
           
           for (const raceNoStr of raceKeys.sort((a, b) => parseInt(a) - parseInt(b))) {
             const raceNo = parseInt(raceNoStr);
             const runners = historicalData.races[raceNoStr] || [];
-            const winner = runners.find(r => r.final_position === 1);
             
-            // 從歷史數據中計算價值投注
-            const valueBets = runners.filter(r => r.is_value_bet);
-            const stakes = valueBets.map(r => ({
+            // 找出實際冠軍
+            const actualWinner = runners.find(r => r.final_position === 1);
+            
+            // 找出模型當時標記的價值投注
+            const predictedValueBets = runners.filter(r => r.is_value_bet);
+            
+            // 計算投注額（使用 1/3 Kelly 保守策略）
+            const stakes = predictedValueBets.map(r => ({
               horse_no: r.horse_no,
-              stake: Math.round(bankroll * (r.kelly_fraction || 0.05)),
+              stake: Math.round(bankroll * (r.kelly_fraction || 0.02)),
               odds: r.win_odds || 0,
             }));
             
             // 計算盈虧
             const totalStake = stakes.reduce((s, b) => s + b.stake, 0);
             let profit = -totalStake;
-            if (winner) {
-              const winningBet = stakes.find(s => s.horse_no === winner.horse_no);
+            
+            if (actualWinner) {
+              const winningBet = stakes.find(s => s.horse_no === actualWinner.horse_no);
               if (winningBet) {
                 profit += winningBet.stake * winningBet.odds;
               }
@@ -104,6 +114,7 @@ export default function BacktestView() {
             races.push({
               race_no: raceNo,
               race_name: `第${raceNo}場`,
+              // 模型當時的預測
               predicted: runners.map(r => ({
                 horse_no: r.horse_no,
                 horse_name_en: r.horse_name_en,
@@ -111,21 +122,23 @@ export default function BacktestView() {
                 win_odds: r.win_odds || 0,
                 is_value_bet: r.is_value_bet,
                 ev: r.ev_value || 0,
-                edge: r.ev_value || 0,
+                edge: (r.model_probability || 0) / (r.market_probability || 0.1) - 1,
                 p_true: r.model_probability || 0,
                 kelly_fraction: r.kelly_fraction || 0,
               })),
+              // 實際賽果
               result: runners.map(r => ({
                 position: r.final_position,
                 horse_no: r.horse_no,
                 horse_name: r.horse_name_en,
-                jockey: r.jockey_name_en || '',
-                barrier: r.barrier || 0,
+                jockey: '',
+                barrier: 0,
                 win_odds: r.win_odds || 0,
                 lbw: '',
                 running_positions: '',
               })),
-              hit: stakes.some(s => s.horse_no === winner?.horse_no),
+              // 是否命中：模型推薦的價值投注中是否包含實際冠軍
+              hit: stakes.some(s => s.horse_no === actualWinner?.horse_no),
               profit,
               stakes,
             });
@@ -139,7 +152,7 @@ export default function BacktestView() {
         console.log('Historical data not available, falling back to live API');
       }
 
-      // 2. 如果歷史數據庫沒有數據，使用舊的 API（實時 API 只支持當天/未來）
+      // Fallback: 如果歷史數據庫沒有數據，使用舊的 API（實時 API 只支持當天/未來）
       setDataSource('live');
       
       // 1. Fetch race results
@@ -257,10 +270,9 @@ export default function BacktestView() {
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-[var(--accent-cyan)]" />
             <input
-              type="text"
+              type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              placeholder="YYYY-MM-DD"
               style={{
                 padding: '10px 14px',
                 backgroundColor: '#1e293b',
@@ -268,7 +280,8 @@ export default function BacktestView() {
                 borderRadius: '8px',
                 color: '#f1f5f9',
                 fontSize: '14px',
-                width: '140px',
+                minWidth: '160px',
+                cursor: 'pointer',
               }}
             />
           </div>
@@ -362,8 +375,16 @@ export default function BacktestView() {
       {loading && (
         <div className="text-center py-8">
           <Loader2 className="w-8 h-8 text-[var(--accent-cyan)] animate-spin mx-auto mb-2" />
-          <p className="text-sm text-[var(--text-muted)]">正在載入賽果並比對模型預測...</p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">每場賽事需獨立分析，請稍候</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {dataSource === 'historical' 
+              ? '從數據庫載入歷史模型預測...' 
+              : '正在載入賽果並比對模型預測...'}
+          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            {dataSource === 'historical' 
+              ? '使用已存儲的模型數據，速度更快' 
+              : '每場賽事需獨立分析，請稍候'}
+          </p>
         </div>
       )}
 
