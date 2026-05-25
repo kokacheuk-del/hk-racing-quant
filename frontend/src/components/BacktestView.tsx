@@ -167,7 +167,18 @@ export default function BacktestView() {
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] cursor-pointer min-w-[140px]"
+            style={{
+              padding: '10px 14px',
+              backgroundColor: '#1e293b',
+              border: '1px solid #475569',
+              borderRadius: '8px',
+              color: '#f1f5f9',
+              fontSize: '14px',
+              minWidth: '160px',
+              cursor: 'pointer',
+            }}
+            onFocus={(e) => { e.target.style.borderColor = '#06b6d4'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#475569'; }}
           />
         </div>
         <div className="flex items-center gap-2">

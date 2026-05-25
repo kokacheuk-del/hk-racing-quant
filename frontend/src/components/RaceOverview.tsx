@@ -101,10 +101,21 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
           <div className="mt-3 flex items-center justify-center gap-2">
             <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
             <input
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] cursor-pointer"
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#1e293b',
+              border: '1px solid #475569',
+              borderRadius: '6px',
+              color: '#f1f5f9',
+              fontSize: '13px',
+              minWidth: '140px',
+              cursor: 'pointer',
+            }}
+            onFocus={(e) => { e.target.style.borderColor = '#06b6d4'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#475569'; }}
             />
           </div>
           <button
@@ -146,7 +157,18 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            className="flex-1 px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] cursor-pointer"
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#1e293b',
+              border: '1px solid #475569',
+              borderRadius: '6px',
+              color: '#f1f5f9',
+              fontSize: '13px',
+              minWidth: '140px',
+              cursor: 'pointer',
+            }}
+            onFocus={(e) => { e.target.style.borderColor = '#06b6d4'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#475569'; }}
           />
           <button
             onClick={() => loadMeetings(selectedDate)}
