@@ -65,7 +65,8 @@ def _get_engine():
                     "application_name": "hk-racing-quant-render"
                 },
                 # SSL configuration for asyncpg
-                "ssl": "require" if os.getenv("DB_SSL", "true").lower() == "true" else False,
+                # asyncpg only accepts True/False (not "require" string)
+                "ssl": os.getenv("DB_SSL", "true").lower() == "true",
             }
         )
         logger.info("✅ Async SQLAlchemy engine initialized with production settings")
