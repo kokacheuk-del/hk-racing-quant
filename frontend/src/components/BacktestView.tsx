@@ -69,9 +69,10 @@ export default function BacktestView() {
       // 2. For each completed race, fetch what our model would have predicted
       const venueCode = resultsData.venue || '';
       const races: BacktestRace[] = [];
+      let failedAnalysis = 0;
 
       for (const raceNoStr of raceKeys.sort((a, b) => parseInt(a) - parseInt(b))) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
         const raceNo = parseInt(raceNoStr);
         const resultRunners: RaceResult[] = resultsData.races[raceNoStr] || [];
         const winner = resultRunners.find(r => r.position === 1);
@@ -108,7 +109,8 @@ export default function BacktestView() {
             stakes,
           });
         } catch {
-          // Analysis not available for this race (may not have been run yet)
+          // Analysis not available for this historical race (API only provides future/current data)
+          failedAnalysis++;
           races.push({
             race_no: raceNo,
             race_name: `第${raceNo}場`,
@@ -122,6 +124,11 @@ export default function BacktestView() {
       }
 
       setBacktestRaces(races.sort((a, b) => a.race_no - b.race_no));
+      
+      // Show warning if some races couldn't be analyzed
+      if (failedAnalysis > 0) {
+        setError(`⚠️ 注意：${failedAnalysis}場賽事無法獲取模型預測（歷史賽事只顯示賽果，不包含當時的賠率與模型數據）`);
+      }
     } catch (e: any) {
       setError(e.message || '回測失敗');
     } finally {
