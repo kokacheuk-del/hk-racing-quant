@@ -110,8 +110,9 @@ export default function BacktestView() {
                 horse_name: r.horse_name_en,
                 win_odds: r.win_odds || 0,
                 is_value_bet: r.is_value_bet,
-                ev_value: r.ev_value || 0,
-                model_probability: r.model_probability || 0,
+                ev: r.ev_value || 0,
+                edge: r.ev_value || 0,
+                p_true: r.model_probability || 0,
                 kelly_fraction: r.kelly_fraction || 0,
               })),
               result: runners.map(r => ({
