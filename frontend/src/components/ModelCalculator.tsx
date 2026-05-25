@@ -194,7 +194,7 @@ export default function ModelCalculator({ meeting, raceNo }: Props) {
     }
   }, [meeting, raceNo, weights]);
 
-  useEffect(() => { loadAnalysis(); }, [loadAnalysis]);
+  useEffect(() => { loadAnalysis(); }, [meeting, raceNo]);
 
   const race = meeting?.races?.find((r: any) => r.no === raceNo);
   if (!race && !analysis) return <div className="card text-[var(--text-muted)]">選擇賽事開始分析</div>;

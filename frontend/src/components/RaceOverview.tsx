@@ -52,7 +52,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
     // Set date picker to today
     const today = new Date().toISOString().split('T')[0];
     setSelectedDate(today);
-  }, [loadMeetings]);
+  }, []);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
@@ -146,7 +146,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            className="flex-1 px-2 py-1 bg-transparent border border-[var(--border)] rounded text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)]"
+            className="flex-1 px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] cursor-pointer"
           />
           <button
             onClick={() => loadMeetings(selectedDate)}
