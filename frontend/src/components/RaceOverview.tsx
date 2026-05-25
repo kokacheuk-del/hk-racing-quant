@@ -104,7 +104,7 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
               type="date"
               value={selectedDate}
               onChange={handleDateChange}
-              className="px-2 py-1 bg-[var(--bg-secondary)] border border-[var(--border)] rounded text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)]"
+              className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] cursor-pointer"
             />
           </div>
           <button

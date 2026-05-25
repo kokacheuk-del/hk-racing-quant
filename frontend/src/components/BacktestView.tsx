@@ -70,7 +70,8 @@ export default function BacktestView() {
       const venueCode = resultsData.venue || '';
       const races: BacktestRace[] = [];
 
-      for (const raceNoStr of raceKeys) {
+      for (const raceNoStr of raceKeys.sort((a, b) => parseInt(a) - parseInt(b))) {
+        await new Promise(resolve => setTimeout(resolve, 200));
         const raceNo = parseInt(raceNoStr);
         const resultRunners: RaceResult[] = resultsData.races[raceNoStr] || [];
         const winner = resultRunners.find(r => r.position === 1);
@@ -166,7 +167,7 @@ export default function BacktestView() {
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            className="px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-cyan)]"
+            className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] cursor-pointer min-w-[140px]"
           />
         </div>
         <div className="flex items-center gap-2">
