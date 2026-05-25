@@ -53,14 +53,27 @@ app = FastAPI(
 )
 
 # CORS — allow Vercel frontend and local dev
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in ALLOWED_ORIGINS],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Allow all origins in production for simplicity (can be restricted later)
+CORS_MODE = os.getenv("CORS_MODE", "strict")
+if CORS_MODE == "relaxed":
+    # Allow all origins (simpler for deployment)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Strict mode with explicit origin list
+    ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in ALLOWED_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Rate limiting (must be added before other middleware for correct IP detection)
 app.add_middleware(RateLimitMiddleware)
@@ -90,7 +103,6 @@ async def log_requests(request: Request, call_next):
 # Always available — live data proxy (no DB needed)
 app.include_router(live_router)
 app.include_router(pre_race_router)
-app.include_router(historical_router)
 
 # DB-dependent routes — only load when DB is configured
 if ENABLE_DB_ROUTES:
@@ -100,9 +112,12 @@ if ENABLE_DB_ROUTES:
         app.include_router(racing_router)
         app.include_router(import_router)
         app.include_router(scraper_router)
+        app.include_router(historical_router)
         logger.info("DB routes enabled")
     except Exception as e:
         logger.warning(f"DB routes skipped: {e}")
+else:
+    logger.info("Live-only mode — DB routes (historical, scraper) disabled")
 
 
 @app.get("/")
