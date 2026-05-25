@@ -40,14 +40,12 @@ def _get_engine():
             DATABASE_URL = DATABASE_URL.replace(":5432/", ":6543/", 1)
             logger.info("✅ Using Supabase Connection Pooler (port 6543)")
         
-        # ===== FIX 3: Force SSL mode for Render → Supabase connection =====
-        # Fixes "SSL handshake failure" timeout errors
-        if 'sslmode' not in DATABASE_URL:
-            if '?' in DATABASE_URL:
-                DATABASE_URL += "&sslmode=require"
-            else:
-                DATABASE_URL += "?sslmode=require"
-            logger.info("✅ Added sslmode=require to DATABASE_URL")
+        # ===== FIX 3: Remove sslmode from URL (asyncpg doesn't understand it) =====
+        # asyncpg uses 'ssl' connect_arg instead of 'sslmode=' in URL
+        if 'sslmode' in DATABASE_URL:
+            # Remove sslmode param and cleanup
+            DATABASE_URL = DATABASE_URL.split('?sslmode=')[0]
+            logger.info("✅ Removed sslmode= from DATABASE_URL (asyncpg incompatible)")
         
         # ===== Production-optimized pool settings =====
         # Smaller pool to avoid exhausting Supabase connections
