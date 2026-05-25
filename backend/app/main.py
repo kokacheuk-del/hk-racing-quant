@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.live import router as live_router
+from app.routers.pre_race import router as pre_race_router
 from app.middleware.rate_limit import RateLimitMiddleware
 
 # Structured logging
@@ -86,6 +87,7 @@ async def log_requests(request: Request, call_next):
 
 # Always available — live data proxy (no DB needed)
 app.include_router(live_router)
+app.include_router(pre_race_router)
 
 # DB-dependent routes — only load when DB is configured
 if ENABLE_DB_ROUTES:

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { RaceMeeting } from '../utils/types';
-import { getRaceMeetings, getActiveMeetings, isColdStarting, clearColdStart } from '../utils/api';
+import { getRaceMeetings, isColdStarting, clearColdStart } from '../utils/api';
 import { formatTime } from '../utils/helpers';
 import { VENUE_MAP, GOING_MAP } from '../utils/types';
 import { Activity, MapPin, Clock, ServerCrash, Loader2, Calendar } from 'lucide-react';
