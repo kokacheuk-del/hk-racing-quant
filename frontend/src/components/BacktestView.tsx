@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getHistoricalResults, getRaceMeetings, getLiveAnalysis } from '../utils/api';
+import { getHistoricalBacktest, triggerScrape, checkHistoricalDataExists } from '../utils/historicalApi';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { History, TrendingUp, TrendingDown, Target, Loader2, CalendarDays, RefreshCw } from 'lucide-react';
+import { History, TrendingUp, TrendingDown, Target, Loader2, CalendarDays, RefreshCw, Database, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface RaceResult {
   position: number;
@@ -39,9 +40,12 @@ interface BacktestRace {
 export default function BacktestView() {
   const [date, setDate] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [scraping, setScraping] = useState(false);
   const [error, setError] = useState('');
   const [backtestRaces, setBacktestRaces] = useState<BacktestRace[]>([]);
   const [bankroll, setBankroll] = useState(1000);
+  const [hasHistoricalData, setHasHistoricalData] = useState(false);
+  const [dataSource, setDataSource] = useState<'historical' | 'live' | 'none'>('none');
 
   // Default to yesterday
   useEffect(() => {
@@ -50,6 +54,13 @@ export default function BacktestView() {
     setDate(d.toISOString().split('T')[0]);
   }, []);
 
+  // Check if historical data exists for this date
+  useEffect(() => {
+    if (date) {
+      checkHistoricalDataExists(date).then(setHasHistoricalData);
+    }
+  }, [date]);
+
   const runBacktest = useCallback(async () => {
     if (!date) return;
     setLoading(true);
@@ -57,6 +68,79 @@ export default function BacktestView() {
     setBacktestRaces([]);
 
     try {
+      // 1. 首先嚐試從歷史數據庫獲取
+      try {
+        const historicalData = await getHistoricalBacktest(date);
+        if (historicalData.success && historicalData.total_races > 0) {
+          setDataSource('historical');
+          
+          // 使用歷史數據庫的數據
+          const races: BacktestRace[] = [];
+          const raceKeys = Object.keys(historicalData.races || {});
+          
+          for (const raceNoStr of raceKeys.sort((a, b) => parseInt(a) - parseInt(b))) {
+            const raceNo = parseInt(raceNoStr);
+            const runners = historicalData.races[raceNoStr] || [];
+            const winner = runners.find(r => r.final_position === 1);
+            
+            // 從歷史數據中計算價值投注
+            const valueBets = runners.filter(r => r.is_value_bet);
+            const stakes = valueBets.map(r => ({
+              horse_no: r.horse_no,
+              stake: Math.round(bankroll * (r.kelly_fraction || 0.05)),
+              odds: r.win_odds || 0,
+            }));
+            
+            // 計算盈虧
+            const totalStake = stakes.reduce((s, b) => s + b.stake, 0);
+            let profit = -totalStake;
+            if (winner) {
+              const winningBet = stakes.find(s => s.horse_no === winner.horse_no);
+              if (winningBet) {
+                profit += winningBet.stake * winningBet.odds;
+              }
+            }
+            
+            races.push({
+              race_no: raceNo,
+              race_name: `第${raceNo}場`,
+              predicted: runners.map(r => ({
+                horse_no: r.horse_no,
+                horse_name_en: r.horse_name_en,
+                horse_name: r.horse_name_en,
+                win_odds: r.win_odds || 0,
+                is_value_bet: r.is_value_bet,
+                ev_value: r.ev_value || 0,
+                model_probability: r.model_probability || 0,
+                kelly_fraction: r.kelly_fraction || 0,
+              })),
+              result: runners.map(r => ({
+                position: r.final_position,
+                horse_no: r.horse_no,
+                horse_name: r.horse_name_en,
+                jockey: r.jockey_name_en || '',
+                barrier: r.barrier || 0,
+                win_odds: r.win_odds || 0,
+                lbw: '',
+                running_positions: '',
+              })),
+              hit: stakes.some(s => s.horse_no === winner?.horse_no),
+              profit,
+              stakes,
+            });
+          }
+          
+          setBacktestRaces(races.sort((a, b) => a.race_no - b.race_no));
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.log('Historical data not available, falling back to live API');
+      }
+
+      // 2. 如果歷史數據庫沒有數據，使用舊的 API（實時 API 只支持當天/未來）
+      setDataSource('live');
+      
       // 1. Fetch race results
       const resultsData = await getHistoricalResults(date);
       const raceKeys = Object.keys(resultsData.races || {});
@@ -226,6 +310,52 @@ export default function BacktestView() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Data Source Indicator & Scrape Button */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        {hasHistoricalData ? (
+          <div className="flex items-center gap-1 text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded">
+            <CheckCircle2 className="w-3 h-3" />
+            歷史數據庫
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-xs px-2 py-1 bg-amber-500/20 text-amber-400 rounded">
+            <AlertCircle className="w-3 h-3" />
+            無歷史數據
+          </div>
+        )}
+        
+        {dataSource === 'historical' && (
+          <span className="text-xs text-green-400">使用數據庫數據</span>
+        )}
+        {dataSource === 'live' && (
+          <span className="text-xs text-amber-400">使用實時 API（僅限當天/未來）</span>
+        )}
+
+        {!hasHistoricalData && (
+          <button
+            onClick={async () => {
+              setScraping(true);
+              try {
+                const result = await triggerScrape(date);
+                if (result.success) {
+                  setHasHistoricalData(true);
+                  setError(`抓取成功：${result.races}場賽事，${result.runners}匹賽馬`);
+                }
+              } catch (e: any) {
+                setError(e.message || '抓取失敗');
+              } finally {
+                setScraping(false);
+              }
+            }}
+            disabled={scraping || !date}
+            className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition disabled:opacity-50"
+          >
+            {scraping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+            抓取數據
+          </button>
+        )}
       </div>
 
       {loading && (
