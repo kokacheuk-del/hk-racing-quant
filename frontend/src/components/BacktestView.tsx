@@ -276,13 +276,16 @@ export default function BacktestView() {
               style={{
                 padding: '10px 14px',
                 backgroundColor: '#1e293b',
-                border: '1px solid #475569',
+                border: '2px solid #06b6d4',
                 borderRadius: '8px',
                 color: '#f1f5f9',
                 fontSize: '14px',
                 minWidth: '160px',
                 cursor: 'pointer',
+                fontWeight: '500',
               }}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = '#22d3ee'}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = '#06b6d4'}
             />
           </div>
           <div className="flex items-center gap-2">

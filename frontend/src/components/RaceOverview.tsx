@@ -107,15 +107,18 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
               value={selectedDate}
               onChange={handleDateChange}
               style={{
-                padding: '8px 12px',
+                padding: '10px 14px',
                 backgroundColor: '#1e293b',
-                border: '1px solid #475569',
-                borderRadius: '6px',
+                border: '2px solid #06b6d4',
+                borderRadius: '8px',
                 color: '#f1f5f9',
-                fontSize: '13px',
-                minWidth: '140px',
+                fontSize: '14px',
+                minWidth: '160px',
                 cursor: 'pointer',
+                fontWeight: '500',
               }}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = '#22d3ee'}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = '#06b6d4'}
             />
           </div>
           <button
@@ -161,15 +164,18 @@ export default function RaceOverview({ onSelectRace, selectedMeeting, selectedRa
               value={selectedDate}
               onChange={handleDateChange}
               style={{
-                padding: '8px 12px',
+                padding: '10px 14px',
                 backgroundColor: '#1e293b',
-                border: '1px solid #475569',
-                borderRadius: '6px',
+                border: '2px solid #06b6d4',
+                borderRadius: '8px',
                 color: '#f1f5f9',
-                fontSize: '13px',
-                minWidth: '140px',
+                fontSize: '14px',
+                minWidth: '160px',
                 cursor: 'pointer',
+                fontWeight: '500',
               }}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = '#22d3ee'}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = '#06b6d4'}
             />
           </div>
           <div className="flex flex-wrap gap-1 mt-1">
