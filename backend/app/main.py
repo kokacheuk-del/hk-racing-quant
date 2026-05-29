@@ -129,7 +129,45 @@ async def root():
         "mode": "full" if ENABLE_DB_ROUTES else "live-only",
         "rate_limit": "30/min, 300/hr per IP",
         "docs": "/docs",
+        "diagnose": "/api/diagnose",
     }
+
+
+@app.get("/api/diagnose")
+async def diagnose():
+    """系统诊断端点 - 测试数据库连接和环境变量"""
+    import os
+    
+    result = {
+        "env_vars": {
+            "ENABLE_DB_ROUTES": ENABLE_DB_ROUTES,
+            "DATABASE_URL_SET": bool(os.getenv("DATABASE_URL")),
+            "DATABASE_URL_MASKED": "",
+        },
+        "tests": {},
+    }
+    
+    # 显示部分 DATABASE_URL 用于调试
+    db_url = os.getenv("DATABASE_URL", "")
+    if db_url:
+        parts = db_url.split("@")
+        if len(parts) > 1:
+            result["env_vars"]["DATABASE_URL_MASKED"] = f"***@{parts[1]}"
+    
+    # 测试数据库连接
+    if ENABLE_DB_ROUTES:
+        try:
+            from app.database import _get_engine
+            engine = _get_engine()
+            async with engine.connect() as conn:
+                await conn.execute("SELECT 1")
+            result["tests"]["db_connection"] = "✅ 成功"
+        except Exception as e:
+            result["tests"]["db_connection"] = f"❌ 失败: {str(e)}"
+    else:
+        result["tests"]["db_connection"] = "⏭️ 跳过 (live-only 模式)"
+    
+    return result
 
 
 @app.get("/health")
