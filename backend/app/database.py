@@ -34,11 +34,17 @@ def _get_engine():
             DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
             logger.info("✅ Converted DATABASE_URL to use asyncpg driver")
         
-        # ===== FIX 2: Use Supabase Connection Pooler (port 6543 instead of 5432) =====
+        # ===== FIX 2: Use Supabase Connection Pooler (domain + port conversion) =====
         # Supavisor mode - avoids connection slot exhaustion under load
-        if ":5432" in DATABASE_URL and os.getenv("USE_SUPABASE_POOLER", "true").lower() == "true":
-            DATABASE_URL = DATABASE_URL.replace(":5432/", ":6543/", 1)
-            logger.info("✅ Using Supabase Connection Pooler (port 6543)")
+        # Convert: xxx.supabase.co:5432 → xxx.pooler.supabase.com:6543
+        if os.getenv("USE_SUPABASE_POOLER", "true").lower() == "true":
+            # First replace port if needed
+            if ":5432" in DATABASE_URL:
+                DATABASE_URL = DATABASE_URL.replace(":5432/", ":6543/", 1)
+            # Then replace domain (critical!)
+            if ".supabase.co:" in DATABASE_URL:
+                DATABASE_URL = DATABASE_URL.replace(".supabase.co:", ".pooler.supabase.com:")
+                logger.info("✅ Converted to Supabase Connection Pooler (pooler.supabase.com:6543)")
         
         # ===== FIX 3: Remove sslmode from URL (asyncpg doesn't understand it) =====
         # asyncpg uses 'ssl' connect_arg instead of 'sslmode=' in URL
