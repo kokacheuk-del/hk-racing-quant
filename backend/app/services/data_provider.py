@@ -92,8 +92,8 @@ class GraphQLProvider(DataProvider):
         venue_code: Optional[str] = None,
     ) -> Optional[Dict]:
         return self._gql.get_race_odds(
-            race_no=race_no, odds_types=odds_types, date=date, venue_code=venue_code
-        )
+    race_no=race_no, odds_types=odds_types, race_date=date, venue_code=venue_code
+)
 
     def get_race_pools(
         self,
@@ -103,8 +103,8 @@ class GraphQLProvider(DataProvider):
         venue_code: Optional[str] = None,
     ) -> Optional[Dict]:
         return self._gql.get_race_pools(
-            race_no=race_no, odds_types=odds_types, date=date, venue_code=venue_code
-        )
+    race_no=race_no, odds_types=odds_types, race_date=date, venue_code=venue_code
+)
 
     def fetch_results(self, race_date: date) -> Any:
         return self._fetcher.fetch_results(race_date)
