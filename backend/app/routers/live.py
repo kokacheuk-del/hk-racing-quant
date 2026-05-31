@@ -123,6 +123,10 @@ class RaceAnalysisOut(BaseModel):
     venue_code: str
     date: str
     race_no: int
+    horse_no: int
+    horse_name: str
+    jockey: str
+    trainer: str
     race_name_en: str
     race_name_ch: str
     distance: int
@@ -135,6 +139,7 @@ class RaceAnalysisOut(BaseModel):
     hidden_signals: List[HiddenSignalOut] = []
     value_bet_count: int
     timestamp: float
+    jockey_trainer_combo: Optional[dict] = None
 
 
 class MeetingOut(BaseModel):
@@ -666,6 +671,13 @@ async def live_analyze(
         jockey = r.get("jockey", {})
         trainer = r.get("trainer", {})
 
+        from app.services.quant_engine import JockeyTrainerComboScorer
+           scorer = JockeyTrainerComboScorer()
+           combo_result = scorer.get_combo_win_rate(
+           jockey_name=runner.jockey,
+           trainer_name=runner.trainer
+         )
+
         runner_analyses.append(RunnerAnalysisOut(
             horse_no=no,
             horse_name=r.get("name_en", ""),
@@ -692,6 +704,7 @@ async def live_analyze(
             last6run=r.get("last6run") or "",
             hot_favourite=hot_fav_map.get(no, False),
             odds_drop=odds_drop_map.get(no, 0),
+            jockey_trainer_combo=combo_result
         ))
 
         # Smart money alerts
