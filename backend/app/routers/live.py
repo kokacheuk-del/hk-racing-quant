@@ -245,6 +245,18 @@ async def live_analyze(
 
     runners_raw = race.get("runners", [])
 
+        # ═══ 加入騎練組合評分 ═══
+    combo_scorer = JockeyTrainerComboScorer(db_session=None)
+    
+    # 給每匹馬加上組合評分信息
+    for runner in runners_raw:
+        jockey_name = runner.get("jockey", {}).get("name_ch", "")
+        trainer_name = runner.get("trainer", {}).get("name_ch", "")
+        
+        if jockey_name and trainer_name:
+            combo_info = combo_scorer.get_combo_score(jockey_name, trainer_name)
+            runner["jockey_trainer_combo"] = combo_info
+
     # ── 掃描當日已完賽場次，建立騎師當日成績 ──
     jockey_today_stats: Dict[str, Dict] = {}  # {jockey_code: {wins, places, rides}}
     for r in meeting.get("races", []):
