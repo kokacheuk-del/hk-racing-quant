@@ -68,10 +68,14 @@ export default function App() {
   // Auto-refresh every 30s when a meeting is selected
   useEffect(() => {
     if (selectedMeeting) {
-      refreshTimerRef.current = setInterval(() => {
+    refreshTimerRef.current = setInterval(() => {
+      // 只在賽事狀態是 RUNNING 時才刷新
+      const currentRace = selectedMeeting.races?.find(r => r.no === selectedRaceNo);
+      if (currentRace?.status === 'RUNNING' || currentRace?.status === 'STARTED') {
         loadAnalysis();
-      }, 30000);
-    }
+      }
+    }, 60000);  // 1分鐘
+  }
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
     };
