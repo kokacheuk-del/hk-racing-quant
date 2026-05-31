@@ -17,6 +17,7 @@ from app.services.quant_engine import (
     QuantAnalysisOrchestrator, RunnerFeatures, FeatureWeights,
 )
 from app.services.signal_detector import HiddenSignalDetector
+from app.services.quant_engine import JockeyTrainerComboScorer
 
 router = APIRouter(prefix="/api/live", tags=["live"])
 
