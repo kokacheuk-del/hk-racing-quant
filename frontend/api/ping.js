@@ -5,7 +5,7 @@
 export default async function handler(req, res) {
   const RENDER_URL = process.env.VITE_API_BASE
     ? process.env.VITE_API_BASE.replace('/api', '/health')
-    : 'https://hk-racing-quant-api.onrender.com/health';
+    : 'https://hk-racing-quant.onrender.com/health';
 
   try {
     const response = await fetch(RENDER_URL, { method: 'GET' });
