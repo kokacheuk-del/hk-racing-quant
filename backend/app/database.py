@@ -37,7 +37,7 @@ def _get_engine():
         # ===== FIX 2: Use Supabase Connection Pooler (domain + port conversion) =====
 # Supavisor mode - avoids connection slot exhaustion under load
 # Convert: xxx.supabase.co:5432 → xxx.pooler.supabase.com:6543
-if os.getenv("USE_SUPABASE_POOLER", "true").lower() == "true":
+if os.getenv("USE_SUPABASE_POOLER", "false").lower() == "true":
     # Replace both domain AND port in one go - more reliable
     if "supabase.co:5432" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace(
